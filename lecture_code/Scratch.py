@@ -12,7 +12,7 @@ if True:
     df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
 
 optimal = Op.Optimization(df, benchmark)
-optimal.assume_best_cov()
-optimal.assume_best_mean()
+optimal.guess_best_cov()
+optimal.guess_best_mean()
 optimal.optimalize_portfolio(optimal.cov, optimal.mean)
 optimal.calculate_return(Plot=True)

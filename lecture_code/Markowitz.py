@@ -23,11 +23,11 @@ class Optimization:
         self.sol = []
         self.profit = []
 
-    def assume_best_cov(self):
+    def guess_best_cov(self):
         Cov = matrix(self.mom_data.cov().values)
         self.cov = Cov
 
-    def assume_best_mean(self):
+    def guess_best_mean(self):
         Mean = matrix(self.mom_data.mean())
         self.mean = Mean
 
@@ -54,7 +54,7 @@ class Optimization:
 
         profit_df['Sum'] = profit_df.sum(axis=1)
         profit = profit_df['Sum']
-        self.profit = profit
+        self.profit = pd.DataFrame(profit)
 
         if Plot:
             result = profit.cumsum(axis=0)
@@ -76,8 +76,8 @@ if __name__ == "__main__":
     df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
 
     optimal = Optimization(df, benchmark)
-    optimal.assume_best_cov()
-    optimal.assume_best_mean()
+    optimal.guess_best_cov()
+    optimal.guess_best_mean()
     optimal.optimalize_portfolio(optimal.cov, optimal.mean)
     optimal.calculate_return(Plot=False)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit.csv'))
