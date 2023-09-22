@@ -16,6 +16,7 @@ class Optimization:
         past_months = self.data.iloc[:-1, :]
         past_months.index = present_months.index
         self.mom_data = (present_months - past_months) / past_months
+        self.mom_data.index = present_months.index
 
         self.benchmark = benchmark
         self.cov = []
@@ -27,8 +28,12 @@ class Optimization:
         Cov = matrix(self.mom_data.cov().values)
         self.cov = Cov
 
-    def guess_best_mean(self):
+    def guess_best_mean_train_set(self):
         Mean = matrix(self.mom_data.mean())
+        self.mean = Mean
+
+    def guess_best_mean_test_set(self, i: int, predicted: pd.DataFrame):
+        Mean = predicted.iloc[i, :]
         self.mean = Mean
 
     def optimalize_portfolio(self, Cov, Mean):
@@ -74,10 +79,13 @@ if __name__ == "__main__":
     df = pd.read_csv(os.path.join(input_dir, file))
     benchmark = pd.concat([df['Date'], df['KOSPI'], df['KOR10Y']], axis=1)
     df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
+    df_train_set=df.iloc[:-12,:]
+    df_test_set=df.iloc[-12:,:]
 
-    optimal = Optimization(df, benchmark)
+
+    optimal = Optimization(df_train_set, benchmark)
     optimal.guess_best_cov()
-    optimal.guess_best_mean()
+    optimal.guess_best_mean_train_set()
     optimal.optimalize_portfolio(optimal.cov, optimal.mean)
     optimal.calculate_return(Plot=False)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit.csv'))
