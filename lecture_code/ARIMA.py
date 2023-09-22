@@ -180,13 +180,14 @@ class ARIMA:
             temp_perf_dict = {}
             num_of_obs = len(time_series)
 
+            # model 바꿀 때 마다 수정 필요.
             q_statistics = res.test_serial_correlation(method='ljungbox', lags=12)[0]
             temp_perf_dict['SSE'] = round(res.sse, 3)
             temp_perf_dict['AIC'] = round(num_of_obs * np.log(res.sse) + 2 * len(res.params), 3)
             temp_perf_dict['SBC'] = round(num_of_obs * np.log(res.sse) + len(res.params) * np.log(num_of_obs), 3)
             temp_perf_dict['Q(1)'] = {'q_stats': round(q_statistics[0][0], 2), 'p_val': round(q_statistics[1][0], 3)}
-            temp_perf_dict['Q(2)'] = {'q_stats': round(q_statistics[0][1], 2), 'p_val': round(q_statistics[1][1], 3)}
             temp_perf_dict['Q(3)'] = {'q_stats': round(q_statistics[0][2], 2), 'p_val': round(q_statistics[1][2], 3)}
+            temp_perf_dict['Q(5)'] = {'q_stats': round(q_statistics[0][4], 2), 'p_val': round(q_statistics[1][4], 3)}
 
             for param_name, param in zip(res.params.index, res.params):
                 temp_perf_dict[param_name] = {'coef': round(param, 3), 't_stats': round(res.tvalues[param_name], 3)}
