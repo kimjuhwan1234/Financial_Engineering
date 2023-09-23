@@ -21,7 +21,7 @@ class ARIMA:
         past_months.index = present_months.index
         self.mom_data = (present_months - past_months) / past_months
 
-    def plot_stationary(self, data: pd.DataFrame, seasonality: int):
+    def plot_time_series(self, data: pd.DataFrame, seasonality: int):
         for i in range(len(data.columns)):
             f, axes = plt.subplots(nrows=5, ncols=1, figsize=(9, 3 * 5))
             axes[0].plot(data.iloc[:, i], color='black', linewidth=1,
@@ -147,21 +147,21 @@ class ARIMA:
                 print(f'Critical values: {result[3]}')
                 print('---' * 40)
 
-    def ACF_and_PACF_test(self, data: pd.DataFrame):
+    def ACF_and_PACF_test(self, time_series):
         '''PACF의 첫째는 무시.
         ACF가 기하급수적으로 감소하지 않고 선형이면 MA doesn't exist.
         Negative value of ACF is not important.'''
 
         f, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 2 * 4))
 
-        plot_acf(data, lags=20, ax=axes[0], title='Autocorrelations', color='black',
+        plot_acf(time_series, lags=20, ax=axes[0], title='Autocorrelations', color='black',
                  vlines_kwargs={'colors': 'black', 'linewidth': 5}, alpha=None)
-        plot_pacf(data, lags=20, ax=axes[1], method='ols', title='PACF', color='gray',
+        plot_pacf(time_series, lags=20, ax=axes[1], method='ols', title='PACF', color='gray',
                   vlines_kwargs={'colors': 'gray', 'linewidth': 5}, alpha=None)
 
-        axes[1].hlines(xmin=0, xmax=20, y=2 * np.sqrt(1 / len(data)), label=f'{data.name}',
+        axes[1].hlines(xmin=0, xmax=20, y=2 * np.sqrt(1 / len(time_series)), label=f'{time_series.name}',
                        color='black', linewidth=1)
-        axes[1].hlines(xmin=0, xmax=20, y=-2 * np.sqrt(1 / len(data)), color='black', linewidth=1)
+        axes[1].hlines(xmin=0, xmax=20, y=-2 * np.sqrt(1 / len(time_series)), color='black', linewidth=1)
         axes[1].legend()
 
         plt.tight_layout()
@@ -173,40 +173,44 @@ class ARIMA:
         else:
             return max(element)
 
-    def evaluate_ARIMA(self, time_series, model_1, model_2, model_3):
+    def evaluate_ARIMA(self, time_series, lag_list: list):
         summary_table = dict()
-        for model in [model_1, model_2, model_3]:
-            res = model
-            temp_perf_dict = {}
-            num_of_obs = len(time_series)
+        num_of_obs = len(time_series)
+        table_2_5 = pd.DataFrame()
 
-            # model 바꿀 때 마다 수정 필요.
+        for lag in lag_list:
+            temp_perf_dict = {}
+            max_values = [self.get_max_value(elem) for elem in lag]
+            max_element = max(max_values)
+            res = sm.tsa.statespace.SARIMAX(endog=time_series[12 - max_element:], order=lag, trend='n').fit()
+
             q_statistics = res.test_serial_correlation(method='ljungbox', lags=12)[0]
-            temp_perf_dict['SSE'] = round(res.sse, 3)
-            temp_perf_dict['AIC'] = round(num_of_obs * np.log(res.sse) + 2 * len(res.params), 3)
-            temp_perf_dict['SBC'] = round(num_of_obs * np.log(res.sse) + len(res.params) * np.log(num_of_obs), 3)
-            temp_perf_dict['Q(1)'] = {'q_stats': round(q_statistics[0][0], 2), 'p_val': round(q_statistics[1][0], 3)}
-            temp_perf_dict['Q(3)'] = {'q_stats': round(q_statistics[0][2], 2), 'p_val': round(q_statistics[1][2], 3)}
-            temp_perf_dict['Q(5)'] = {'q_stats': round(q_statistics[0][4], 2), 'p_val': round(q_statistics[1][4], 3)}
+            temp_perf_dict['SSE'] = round(res.sse, 2)
+            temp_perf_dict['AIC'] = round(num_of_obs * np.log(res.sse) + 2 * len(res.params), 2)
+            temp_perf_dict['SBC'] = round(num_of_obs * np.log(res.sse) + len(res.params) * np.log(num_of_obs), 2)
+            temp_perf_dict['Q(4)'] = {'q_stats': round(q_statistics[0][3], 2), 'p_val': round(q_statistics[1][3], 2)}
+            temp_perf_dict['Q(8)'] = {'q_stats': round(q_statistics[0][7], 2), 'p_val': round(q_statistics[1][7], 2)}
+            temp_perf_dict['Q(12)'] = {'q_stats': round(q_statistics[0][11], 2), 'p_val': round(q_statistics[1][11], 2)}
 
             for param_name, param in zip(res.params.index, res.params):
-                temp_perf_dict[param_name] = {'coef': round(param, 3), 't_stats': round(res.tvalues[param_name], 3)}
-            hashable_order = tuple([tuple(order) if isinstance(order, list) == True else order for order in
-                                    res.specification['order']])  # make res.specification['order'] hashable.
-            hashable_s_order = tuple([tuple(s_order) if isinstance(s_order, list) == True else s_order for s_order in
-                                      res.specification['seasonal_order']])  # make res.specification['order'] hashable.
-            summary_table[(hashable_order, hashable_s_order)] = temp_perf_dict
+                temp_perf_dict[param_name] = {'coef': round(param, 2), 't_stats': round(res.tvalues[param_name], 2)}
+            hashable_order = tuple(
+                [tuple(order) if isinstance(order, list) == True else order for order in res.specification['order']])
+            summary_table[hashable_order] = temp_perf_dict
 
-            table_2_5 = pd.DataFrame()
-            for key, value in summary_table.items():
-                temp_series = pd.Series(value, name=key)
-                table_2_5 = pd.concat([table_2_5, temp_series], axis=1)
+        for key, value in summary_table.items():
+            temp_series = pd.Series(value, name=key)
+            table_2_5 = pd.concat([table_2_5, temp_series], axis=1)
 
         table_2_5.drop(index=['sigma2'], inplace=True)
         print(table_2_5.to_string())
         # 계절성이 있는 term을 추가 하면 다음과 같이 적는다. ex) 'ar.S.L1'/'ma.S.L12'
 
-    def forecasting(self, data, time_series, model, start_date, predict_date):
+    def forecasting(self, data, time_series, lag, start_date, predict_date):
+        max_values = [self.get_max_value(elem) for elem in lag]
+        max_element = max(max_values)
+        model = sm.tsa.statespace.SARIMAX(endog=time_series[12 - max_element:], order=lag, trend='n').fit()
+
         forecasts_m1 = model.forecast(steps=12)
         forecasts_m1.index = pd.date_range(start=time_series.index[-1] + pd.DateOffset(days=1), periods=12, freq='MS')
         full_seasonal_diff = pd.concat([time_series, forecasts_m1], axis=0)
@@ -240,6 +244,52 @@ class ARIMA:
 
         return predicted
 
+    def estimate_forecasting_error(self, time_series, lag, predict_date):
+        checker = time_series.index <= predict_date
+
+        train_set = time_series[checker]
+        test_set = time_series[~checker]
+        n_train = len(train_set)
+        n_test = len(test_set)
+        f1, f1_error = [], []
+        ground_truth = []
+
+        for i in range(n_test):
+            crt_time = i + n_train
+            x_train = time_series[:crt_time]
+            model_1 = sm.tsa.statespace.SARIMAX(endog=x_train, order=lag, trend='n').fit()
+
+            # one-step-ahead forecasts
+            forecast_1 = model_1.forecast(steps=1)
+
+            # true one-step-ahead value
+            y = time_series[crt_time]
+            ground_truth.append(y)
+            f1.append(forecast_1[0])
+            f1_error.append(y - forecast_1[0])
+
+        plt.figure(figsize=(12, 4))
+        plt.plot(ground_truth, label='ground truth', color='k', linestyle='--')
+        plt.plot(f1, label='f1 predicted', color='r')
+        plt.legend()
+        plt.show()
+
+        plt.figure(figsize=(12, 4))
+        plt.scatter(np.linspace(1, len(f1_error), len(f1_error)), f1_error, label='f1error', color='r')
+        plt.axhline(y=0, color='k', linestyle='--')
+        plt.legend()
+        plt.show()
+
+        s_2000_3q = ground_truth[0]
+        f1_2000_3q = f1[0]
+        f1 = pd.Series(f1)
+        f1_error = pd.Series(f1_error)
+
+        print(f"Actual value:{round(s_2000_3q, 3)}, f1 forecast:{round(f1_2000_3q, 3)}")
+        print(f"avg f1:{round(np.array(f1).mean(), 4)}")
+        print(f"var of f1:{round(np.array(f1).var(), 4)}")
+        print(f'mean squared prediction error of f1: {round((f1_error ** 2).mean(), 4)}')
+
 
 if __name__ == "__main__":
     input_dir = "../lecture_data"
@@ -253,62 +303,64 @@ if __name__ == "__main__":
     df = df.iloc[:, :4]
 
     ARMA = ARIMA(df)
-    # ARMA.plot_stationary(ARMA.mom_data, 10)
+    # ARMA.plot_time_series(ARMA.mom_data, 10)
     # ARMA.adf_test(ARMA.mom_data, 10)
     # ARMA.kpss_test(ARMA.mom_data, 10)
 
     stock1 = True
     if stock1:
         time_series = np.log(ARMA.data.iloc[:-12, 0] / ARMA.data.iloc[:-12, 0].shift(10)).dropna()
-        ARMA.ACF_and_PACF_test(time_series)
-        model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-        model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-        model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-        ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-        predicted = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, model_1, '2011-01-01', '2019-12-01')
+        full_time_series = np.log(ARMA.data.iloc[:, 0] / ARMA.data.iloc[:, 0].shift(10)).dropna()
 
-    stock1 = True
-    if stock1:
-        time_series = np.log(ARMA.data.iloc[:-12, 0] / ARMA.data.iloc[:-12, 0].shift(10)).dropna()
         ARMA.ACF_and_PACF_test(time_series)
-        model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-        model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-        model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-        ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-        predicted1 = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, model_1, '2011-01-01', '2019-12-01')
+        lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+        ARMA.evaluate_ARIMA(time_series, lag_list)
+        predicted1 = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, (range(2, 3), 0, [2]),
+                                      '2011-01-01', '2019-12-01')
+        ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
     stock2 = True
     if stock2:
         time_series = np.log(ARMA.data.iloc[:-12, 1] / ARMA.data.iloc[:-12, 1].shift(10)).dropna()
+        full_time_series = np.log(ARMA.data.iloc[:, 1] / ARMA.data.iloc[:, 1].shift(10)).dropna()
+
         ARMA.ACF_and_PACF_test(time_series)
-        model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-        model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-        model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-        ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-        predicted2 = ARMA.forecasting(ARMA.data.iloc[:-12, 1], time_series, model_1, '2011-01-01', '2019-12-01')
+        lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+        ARMA.evaluate_ARIMA(time_series, lag_list)
+        predicted2 = ARMA.forecasting(ARMA.data.iloc[:-12, 1], time_series, (range(2, 3), 0, [2]),
+                                      '2011-01-01', '2019-12-01')
+        ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
     stock3 = True
     if stock3:
         time_series = np.log(ARMA.data.iloc[:-12, 2] / ARMA.data.iloc[:-12, 2].shift(10)).dropna()
+        full_time_series = np.log(ARMA.data.iloc[:, 2] / ARMA.data.iloc[:, 2].shift(10)).dropna()
+
         ARMA.ACF_and_PACF_test(time_series)
-        model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-        model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-        model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-        ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-        predicted3 = ARMA.forecasting(ARMA.data.iloc[:-12, 2], time_series, model_1, '2011-01-01', '2019-12-01')
+        lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+        ARMA.evaluate_ARIMA(time_series, lag_list)
+        predicted3 = ARMA.forecasting(ARMA.data.iloc[:-12, 2], time_series, (range(2, 3), 0, [2]),
+                                      '2011-01-01', '2019-12-01')
+        ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
     stock4 = True
     if stock4:
         time_series = np.log(ARMA.data.iloc[:-12, 3] / ARMA.data.iloc[:-12, 3].shift(10)).dropna()
-        ARMA.ACF_and_PACF_test(time_series)
-        model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-        model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-        model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-        ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-        predicted4 = ARMA.forecasting(ARMA.data.iloc[:-12, 3], time_series, model_1, '2011-01-01', '2019-12-01')
+        full_time_series = np.log(ARMA.data.iloc[:, 3] / ARMA.data.iloc[:, 3].shift(10)).dropna()
 
-    total = pd.concat([predicted1, predicted2, predicted3, predicted4], axis=1)
-    present_months = total.iloc[1:, :]
-    past_months = total.iloc[:-1, :]
-    past_months.index = present_months.index
-    total_mom_data = (present_months - past_months) / past_months
+        ARMA.ACF_and_PACF_test(time_series)
+        lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+        ARMA.evaluate_ARIMA(time_series, lag_list)
+        predicted4 = ARMA.forecasting(ARMA.data.iloc[:-12, 3], time_series, (range(2, 3), 0, [2]),
+                                      '2011-01-01', '2019-12-01')
+        ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
+
+        total = pd.concat([predicted1, predicted2, predicted3, predicted4], axis=1)
+        present_months = total.iloc[1:, :]
+        past_months = total.iloc[:-1, :]
+        past_months.index = present_months.index
+        total_mom_data = (present_months - past_months) / past_months

@@ -21,42 +21,54 @@ ARMA = ARIMA(df)
 stock1 = True
 if stock1:
     time_series = np.log(ARMA.data.iloc[:-12, 0] / ARMA.data.iloc[:-12, 0].shift(10)).dropna()
+    full_time_series = np.log(ARMA.data.iloc[:, 0] / ARMA.data.iloc[:, 0].shift(10)).dropna()
+
     ARMA.ACF_and_PACF_test(time_series)
-    model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-    model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-    model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-    ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-    predicted1 = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, model_1, '2011-01-01', '2019-12-01')
+    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+    ARMA.evaluate_ARIMA(time_series, lag_list)
+    predicted1 = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, (range(2, 3), 0, [2]), \
+                                  '2011-01-01', '2019-12-01')
+    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
 stock2 = True
 if stock2:
     time_series = np.log(ARMA.data.iloc[:-12, 1] / ARMA.data.iloc[:-12, 1].shift(10)).dropna()
+    full_time_series = np.log(ARMA.data.iloc[:, 1] / ARMA.data.iloc[:, 1].shift(10)).dropna()
+
     ARMA.ACF_and_PACF_test(time_series)
-    model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(5, 0, 0)).fit()
-    model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=([1, 3, 5], 0, 0)).fit()
-    model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(5, 0, 5)).fit()
-    ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-    predicted2 = ARMA.forecasting(ARMA.data.iloc[:-12, 1], time_series, model_2, '2011-01-01', '2019-12-01')
+    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+    ARMA.evaluate_ARIMA(time_series, lag_list)
+    predicted2 = ARMA.forecasting(ARMA.data.iloc[:-12, 1], time_series, (range(2, 3), 0, [2]),
+                                  '2011-01-01', '2019-12-01')
+    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
 stock3 = True
 if stock3:
     time_series = np.log(ARMA.data.iloc[:-12, 2] / ARMA.data.iloc[:-12, 2].shift(10)).dropna()
+    full_time_series = np.log(ARMA.data.iloc[:, 2] / ARMA.data.iloc[:, 2].shift(10)).dropna()
+
     ARMA.ACF_and_PACF_test(time_series)
-    model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-    model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-    model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-    ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-    predicted3 = ARMA.forecasting(ARMA.data.iloc[:-12, 2], time_series, model_1, '2011-01-01', '2019-12-01')
+    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+    ARMA.evaluate_ARIMA(time_series, lag_list)
+    predicted3 = ARMA.forecasting(ARMA.data.iloc[:-12, 2], time_series, (range(2, 3), 0, [2]),
+                                  '2011-01-01', '2019-12-01')
+    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
 stock4 = True
 if stock4:
     time_series = np.log(ARMA.data.iloc[:-12, 3] / ARMA.data.iloc[:-12, 3].shift(10)).dropna()
+    full_time_series = np.log(ARMA.data.iloc[:, 3] / ARMA.data.iloc[:, 3].shift(10)).dropna()
+
     ARMA.ACF_and_PACF_test(time_series)
-    model_1 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(2, 3), 0, [2])).fit()
-    model_2 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(range(1, 4), 0, 0)).fit()
-    model_3 = sm.tsa.statespace.SARIMAX(time_series, trend='n', order=(1, 0, 0)).fit()
-    ARMA.evaluate_ARIMA(time_series, model_1, model_2, model_3)
-    predicted4 = ARMA.forecasting(ARMA.data.iloc[:-12, 3], time_series, model_3, '2011-01-01', '2019-12-01')
+    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+
+    ARMA.evaluate_ARIMA(time_series, lag_list)
+    predicted4 = ARMA.forecasting(ARMA.data.iloc[:-12, 3], time_series, (range(2, 3), 0, [2]),
+                                  '2011-01-01', '2019-12-01')
+    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
 
 portfolio = True
 if portfolio:
