@@ -12,105 +12,69 @@ if True:
     df['Date'] = pd.to_datetime(df['Date'])
     df.set_index('Date', inplace=True)
     df = df.iloc[:, :4]
+    print(df)
 
-ARMA = ARIMA(df)
-# ARMA.plot_stationary(ARMA.mom_data, 10)
-# ARMA.adf_test(ARMA.mom_data, 10)
-# ARMA.kpss_test(ARMA.mom_data, 10)
+    present_months = df.iloc[1:, :]
+    past_months = df.iloc[:-1, :]
+    past_months.index = present_months.index
+    mom_data = (present_months - past_months) / past_months
+    mom_data.index = present_months.index
+    mom_data = pd.DataFrame(mom_data)
+    print(mom_data)
 
-stock1 = True
-if stock1:
-    time_series = np.log(ARMA.data.iloc[:-12, 0] / ARMA.data.iloc[:-12, 0].shift(10)).dropna()
-    full_time_series = np.log(ARMA.data.iloc[:, 0] / ARMA.data.iloc[:, 0].shift(10)).dropna()
+if True:
+    total_index_length = len(df)
+    index_chunks = []
 
-    ARMA.ACF_and_PACF_test(time_series)
-    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+    for i in range(0, total_index_length):
+        start_index = i
+        if (start_index + 11) >= total_index_length:
+            break
+        index_chunks.append((start_index, start_index + 11))
 
-    ARMA.evaluate_ARIMA(time_series, lag_list)
-    predicted1 = ARMA.forecasting(ARMA.data.iloc[:-12, 0], time_series, (range(2, 3), 0, [2]), \
-                                  '2011-01-01', '2019-12-01')
-    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
+    print(index_chunks)
 
-stock2 = True
-if stock2:
-    time_series = np.log(ARMA.data.iloc[:-12, 1] / ARMA.data.iloc[:-12, 1].shift(10)).dropna()
-    full_time_series = np.log(ARMA.data.iloc[:, 1] / ARMA.data.iloc[:, 1].shift(10)).dropna()
+if True:
+    ARMA = ARIMA(df)
+    lst = [([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10)]
 
-    ARMA.ACF_and_PACF_test(time_series)
-    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
+    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
+    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
 
-    ARMA.evaluate_ARIMA(time_series, lag_list)
-    predicted2 = ARMA.forecasting(ARMA.data.iloc[:-12, 1], time_series, (range(2, 3), 0, [2]),
-                                  '2011-01-01', '2019-12-01')
-    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
-
-stock3 = True
-if stock3:
-    time_series = np.log(ARMA.data.iloc[:-12, 2] / ARMA.data.iloc[:-12, 2].shift(10)).dropna()
-    full_time_series = np.log(ARMA.data.iloc[:, 2] / ARMA.data.iloc[:, 2].shift(10)).dropna()
-
-    ARMA.ACF_and_PACF_test(time_series)
-    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
-
-    ARMA.evaluate_ARIMA(time_series, lag_list)
-    predicted3 = ARMA.forecasting(ARMA.data.iloc[:-12, 2], time_series, (range(2, 3), 0, [2]),
-                                  '2011-01-01', '2019-12-01')
-    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
-
-stock4 = True
-if stock4:
-    time_series = np.log(ARMA.data.iloc[:-12, 3] / ARMA.data.iloc[:-12, 3].shift(10)).dropna()
-    full_time_series = np.log(ARMA.data.iloc[:, 3] / ARMA.data.iloc[:, 3].shift(10)).dropna()
-
-    ARMA.ACF_and_PACF_test(time_series)
-    lag_list = [(range(2, 3), 0, [2]), ([1, 2, 3], 0, 0), (1, 0, 0)]
-
-    ARMA.evaluate_ARIMA(time_series, lag_list)
-    predicted4 = ARMA.forecasting(ARMA.data.iloc[:-12, 3], time_series, (range(2, 3), 0, [2]),
-                                  '2011-01-01', '2019-12-01')
-    ARMA.estimate_forecasting_error(full_time_series, (range(2, 3), 0, [2]), '2019-12-01')
+    for j in range(4):
+        for i in range(len(index_chunks) - 1):
+            period = range(index_chunks[i][0], index_chunks[i][1])
+            r, var = ARMA.forecasting(period, j, lst[j])
+            return_df.iloc[i, j] = r
+            var_df.iloc[i, j] = var
 
 portfolio = True
 if portfolio:
-    total = pd.concat([predicted1, predicted2, predicted3, predicted4], axis=1)
-    present_months = total.iloc[1:, :]
-    past_months = total.iloc[:-1, :]
-    past_months.index = present_months.index
-    total_mom_data = (present_months - past_months) / past_months
+    return_df=return_df.astype(float)
+    var_df=var_df.astype(float)
+    return_df.to_csv('../lecture_data/return_df_before.csv')
+    var_df.to_csv('../lecture_data/var_df_before.csv')
 
-    # total_mom_data에서 전부 음수인 행 찾기
-    negative_rows = total_mom_data[(total_mom_data < 0).all(axis=1)]
+    optimal = Optimization(df, mom_data, benchmark, return_df, var_df, index_chunks)
+    sol_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
 
-    # 절댓값이 가장 작은 음수를 양수로 바꾸기
-    for index, row in negative_rows.iterrows():
-        min_negative_value = row.min()
-        min_negative_index = row.idxmin()  # 가장 작은 음수 값의 열 인덱스 찾기
-        total_mom_data.at[index, min_negative_index] = -min_negative_value
+    optimal.guess_initial_cov()
+    optimal.guess_initial_mean()
+    optimal.detect_error()
 
-    # 결과 출력
-    print(total_mom_data)
+    optimal.return_df.to_csv('../lecture_data/return_df_after.csv')
+    optimal.var_df.to_csv('../lecture_data/var_df_after.csv')
 
-    optimal = Optimization(df_train_set, benchmark)
-    optimal.guess_best_cov()
-    optimal.guess_best_mean_train_set()
     optimal.optimalize_portfolio(optimal.cov, optimal.mean)
-    optimal.calculate_return_train_set(Plot=False)
-    optimal.profit.to_csv(os.path.join(input_dir, 'profit_train.csv'))
-    train_profit = optimal.profit
 
-    optimal = Optimization(df_test_set, benchmark)
-    profit_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
+    sol_df.iloc[:12, :] = optimal.sol
 
-    for i in range(len(df_test_set) - 1):
+    for i in range(len(index_chunks) - 1):
         print(i)
-        optimal.guess_best_cov()
-        optimal.guess_best_mean_test_set(i, predicted=total_mom_data)
+        optimal.guess_test_cov(i)
+        optimal.guess_test_mean(i)
         optimal.optimalize_portfolio(optimal.cov, optimal.mean)
-        optimal.concat_return_test_set(i, profit_df)
+        sol_df.iloc[i + 12, :] = optimal.sol
 
-    optimal.calcualte_return_test_set(profit_df)
-    optimal.profit.to_csv(os.path.join(input_dir, 'profit_test.csv'))
-    test_profit = optimal.profit
-
-    profit = pd.concat([train_profit, test_profit])
-    optimal.plot_profit(profit)
+    optimal.calculate_return(sol_df, Plot=True)
+    optimal.profit.to_csv(os.path.join(input_dir, 'profit_df.csv'))

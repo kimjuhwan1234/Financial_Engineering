@@ -7,33 +7,54 @@ import matplotlib.pyplot as plt
 
 
 class Optimization:
-    def __init__(self, data: pd.DataFrame, benchmark: pd.DataFrame):
-        data['Date'] = pd.to_datetime(data['Date'])
-        data.set_index('Date', inplace=True)
-        self.data = data.iloc[:, :4]
-
-        present_months = self.data.iloc[1:, :]
-        past_months = self.data.iloc[:-1, :]
-        past_months.index = present_months.index
-        self.mom_data = (present_months - past_months) / past_months
-        self.mom_data.index = present_months.index
-
+    def __init__(self, data: pd.DataFrame, mom_data: pd.DataFrame, benchmark: pd.DataFrame,
+                 return_df: pd.DataFrame, var_df: pd.DataFrame, index_chunks: list):
+        self.data = data
+        self.mom_data = mom_data
         self.benchmark = benchmark
+        self.return_df = return_df.astype(float)
+        self.var_df = var_df.astype(float)
+        self.index_chunks = index_chunks
         self.cov = []
         self.mean = []
+        self.ini_mean = []
         self.sol = []
         self.profit = []
 
-    def guess_best_cov(self):
-        Cov = matrix(self.mom_data.cov().values)
+    def guess_initial_cov(self):
+        Cov = matrix(self.mom_data.iloc[:12, :].cov().values)
         self.cov = Cov
 
-    def guess_best_mean_train_set(self):
-        Mean = matrix(self.mom_data.mean())
-        self.mean = Mean
+    def guess_initial_mean(self):
+        Mean = matrix(self.mom_data.iloc[:12, :].mean())
+        self.mean=Mean
+        self.ini_mean = list(Mean)
 
-    def guess_best_mean_test_set(self, i: int, predicted: pd.DataFrame):
-        Mean = matrix(predicted.iloc[i, :])
+
+    def detect_error(self):
+        # total_mom_data에서 전부 음수인 행 찾기
+        negative_rows = self.return_df[(self.return_df < 0).all(axis=1)]
+
+        # 절댓값이 가장 작은 음수를 0으로 바꾸기
+        for index, row in negative_rows.iterrows():
+            # min_negative_value = row.min()
+            # min_negative_index = row.idxmin()  # 가장 작은 음수 값의 열 인덱스 찾기
+            # return_df.at[index, min_negative_index] = -min_negative_value
+            index2 = pd.to_datetime(index)
+            index2 = index2 - pd.DateOffset(months=1)
+            self.return_df.loc[index] = self.return_df.loc[index2]
+            self.var_df.loc[index]=self.var_df.loc[index2]
+
+
+    def guess_test_cov(self, i: int):
+        var = self.var_df.iloc[i, :]
+        std = var.apply(np.sqrt)
+        Cov = np.outer(std, std) * self.mom_data.iloc[self.index_chunks[i ][0]:self.index_chunks[i][1], :].corr()
+        Cov = matrix(Cov.values)
+        self.cov = Cov
+
+    def guess_test_mean(self, i: int):
+        Mean = matrix(self.return_df.iloc[i, :])
         self.mean = Mean
 
     def optimalize_portfolio(self, Cov, Mean):
@@ -47,13 +68,10 @@ class Optimization:
         b = matrix(1.0)
         q = matrix(np.zeros((n, 1)))
         sol = qp(Cov, q, G, h, A, b)
+        self.sol = list(sol['x'])
 
-        self.sol = sol['x']
-
-    def calculate_return_train_set(self, Plot: bool):
-        sol = pd.DataFrame(self.sol).T
-        profit_df = self.mom_data * sol.values
-
+    def calculate_return(self, sol_df: pd.DataFrame, Plot: bool):
+        profit_df = self.mom_data * sol_df
         profit_df = profit_df + 1
         profit_df = np.log(profit_df)
 
@@ -71,32 +89,6 @@ class Optimization:
             plt.xticks(rotation=45)
             plt.tight_layout()
             plt.show()
-
-    def concat_return_test_set(self, i: int, profit_df):
-        sol = pd.DataFrame(self.sol).T
-        moment = self.mom_data * sol.values
-        profit_df.iloc[i, :] = moment.iloc[i, :]
-
-    def calcualte_return_test_set(self, profit_df: pd.DataFrame):
-        profit_df = profit_df + 1
-        profit_df2 = pd.DataFrame(data=profit_df.values, columns=profit_df.columns, index=profit_df.index)
-        profit_df = np.log(profit_df2)
-
-        profit_df['Sum'] = profit_df.sum(axis=1)
-        profit = profit_df['Sum']
-        self.profit = pd.DataFrame(profit)
-
-    def plot_profit(self, profit):
-        result = profit.cumsum(axis=0)
-        plt.figure(figsize=(10, 6))
-        plt.plot(result)
-        plt.title('return')
-        plt.xlabel('Date')
-        plt.ylabel('Value')
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show()
-
 
 if __name__ == "__main__":
     input_dir = '../lecture_data'
