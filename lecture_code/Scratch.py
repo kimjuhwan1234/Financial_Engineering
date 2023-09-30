@@ -7,11 +7,10 @@ if True:
     df = pd.read_csv(os.path.join(input_dir, file))
     benchmark = pd.concat([df['Date'], df['KOSPI'], df['KOR10Y']], axis=1)
     df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
-    df_train_set = df.iloc[:-12, :]
-    df_test_set = df.iloc[-13:, :]
     df['Date'] = pd.to_datetime(df['Date'])
     df.set_index('Date', inplace=True)
     df = df.iloc[:, :4]
+    print(benchmark)
     print(df)
 
     present_months = df.iloc[1:, :]
@@ -28,9 +27,9 @@ if True:
 
     for i in range(0, total_index_length):
         start_index = i
-        if (start_index + 11) >= total_index_length:
+        if (start_index + 12) >= total_index_length:
             break
-        index_chunks.append((start_index, start_index + 11))
+        index_chunks.append((start_index, start_index + 12))
 
     print(index_chunks)
 
@@ -38,39 +37,27 @@ if True:
     ARMA = ARIMA(df)
     lst = [([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10)]
 
-    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
-    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
+    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:120])
+    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:120])
 
     for j in range(4):
         for i in range(len(index_chunks) - 1):
             period = range(index_chunks[i][0], index_chunks[i][1])
-            r, var = ARMA.forecasting(period, j, lst[j])
+            r, var = ARMA.forecasting_ARMA_GARCH(period, j, lst[j])
             return_df.iloc[i, j] = r
             var_df.iloc[i, j] = var
 
 portfolio = True
 if portfolio:
-    return_df=return_df.astype(float)
-    var_df=var_df.astype(float)
-    return_df.to_csv('../lecture_data/return_df_before.csv')
-    var_df.to_csv('../lecture_data/var_df_before.csv')
-
     optimal = Optimization(df, mom_data, benchmark, return_df, var_df, index_chunks)
     sol_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
 
     optimal.guess_initial_cov()
     optimal.guess_initial_mean()
-    optimal.detect_error()
-
-    optimal.return_df.to_csv('../lecture_data/return_df_after.csv')
-    optimal.var_df.to_csv('../lecture_data/var_df_after.csv')
-
     optimal.optimalize_portfolio(optimal.cov, optimal.mean)
-
     sol_df.iloc[:12, :] = optimal.sol
 
     for i in range(len(index_chunks) - 1):
-        print(i)
         optimal.guess_test_cov(i)
         optimal.guess_test_mean(i)
         optimal.optimalize_portfolio(optimal.cov, optimal.mean)
@@ -78,3 +65,44 @@ if portfolio:
 
     optimal.calculate_return(sol_df, Plot=True)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit_df.csv'))
+
+portfolio_analysis = True
+if portfolio_analysis:
+    result = pd.DataFrame(
+        index=['Cumulative Return', 'monthly return min', 'monthly return max', 'annual return mean',
+               'annual return std', 'downside std'],
+        columns=['Evaluation Metric(log scale)'])
+
+    row = optimal.profit.iloc[:, 0]
+    result.iloc[0, 0] = float(optimal.profit.sum())
+    result.iloc[1, 0] = np.min(row)
+    result.iloc[2, 0] = np.max(row)
+    result.iloc[3, 0] = np.exp(np.mean(row) * 12) - 1
+    result.iloc[4, 0] = np.exp(np.std(row) * np.sqrt(12)) - 1
+    result.iloc[5, 0] = np.exp(np.std(row[row < 0] * np.sqrt(12))) - 1
+
+    MDD = pd.DataFrame(index=['Maximum drawdown'], columns=result.columns)
+    row = optimal.profit.iloc[:, 0]
+    row2 = np.exp(row.astype(float)) - 1
+    cumulative_returns = np.cumprod(1 + row2) - 1
+    peak = np.maximum.accumulate(cumulative_returns)
+    drawdown = (cumulative_returns - peak) / (peak + 1)
+    max_drawdown = drawdown.min()
+    MDD.iloc[0, 0] = max_drawdown
+    result = pd.concat([result, MDD], axis=0)
+
+    sharpe_ratio = pd.DataFrame(index=['Sharpe ratio'], columns=result.columns)
+    sharpe_ratio.iloc[0, 0] = result.iloc[3, 0] / result.iloc[4, 0]
+    result = pd.concat([result, sharpe_ratio], axis=0)
+
+    sortino_ratio = pd.DataFrame(index=['Sortino ratio'], columns=result.columns)
+    sf = result.iloc[3, 0] / result.iloc[5, 0]
+    sortino_ratio.iloc[0, 0] = sf
+    result = pd.concat([result, sortino_ratio], axis=0)
+
+    calmar_ratio = pd.DataFrame(index=['Calmar ratio'], columns=result.columns)
+    calmar = result.iloc[3, 0] / abs(result.iloc[7, 0])
+    calmar_ratio.iloc[0, 0] = calmar
+    result = pd.concat([result, calmar_ratio], axis=0)
+
+    result.to_csv('../lecture_data/Evaluation_Metric.csv')

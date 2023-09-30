@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-from statsmodels.tsa.stattools import acf
 from statsmodels.tsa.stattools import kpss
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf
@@ -319,7 +318,7 @@ class ARIMA:
         print(f"var of f1:{round(np.array(f1).var(), 4)}")
         print(f'mean squared prediction error of f1: {round((f1_error ** 2).mean(), 4)}')
 
-    def forecasting(self, period: range, firm_number: int, lag: tuple):
+    def forecasting_ARMA_GARCH(self, period: range, firm_number: int, lag: tuple):
         time_series = self.mom_data.iloc[period, firm_number]
         SARIMA_model = sm.tsa.statespace.SARIMAX(endog=time_series, seasonal_order=lag, trend='n').fit()
         GARCH_model = arch.arch_model(SARIMA_model.resid, vol='GARCH', p=1, q=1).fit(disp='off', show_warning=False)
@@ -355,9 +354,12 @@ if __name__ == "__main__":
         print(index_chunks)
 
     ARMA = ARIMA(df)
-    # ARMA.plot_time_series(ARMA.data, 10)
-    # ARMA.adf_test(ARMA.mom_data, 10)
-    # ARMA.kpss_test(ARMA.mom_data, 10)
+
+    overall = False
+    if overall:
+        ARMA.plot_time_series(ARMA.data, 10)
+        ARMA.adf_test(ARMA.mom_data, 10)
+        ARMA.kpss_test(ARMA.mom_data, 10)
 
     stock1 = False
     if stock1:
@@ -375,15 +377,50 @@ if __name__ == "__main__":
 
         ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
 
-    lst = [([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10)]
+    stock2 = False
+    if stock2:
+        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 1] / ARMA.mom_data.iloc[:-12, 1].shift(10)).dropna()
 
-    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
-    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[12:120])
+        ARMA.ACF_and_PACF_test(test_time_series)
 
-    for j in range(4):
-        for i in range(len(index_chunks)-1):
-            period = range(index_chunks[i][0], index_chunks[i][1])
-            print(period)
-            r, var=ARMA.forecasting(period, j, lst[j])
-            return_df.iloc[i,j]=r
-            var_df.iloc[i,j]=var
+        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
+        ARMA.evaluate_ARIMA(test_time_series, lag_list)
+
+        time_series = ARMA.mom_data.iloc[:-12, 1]
+        full_time_series = ARMA.mom_data.iloc[:, 1]
+
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+
+    stock3 = False
+    if stock3:
+        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 2] / ARMA.mom_data.iloc[:-12, 2].shift(10)).dropna()
+
+        ARMA.ACF_and_PACF_test(test_time_series)
+
+        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
+        ARMA.evaluate_ARIMA(test_time_series, lag_list)
+
+        time_series = ARMA.mom_data.iloc[:-12, 2]
+        full_time_series = ARMA.mom_data.iloc[:, 2]
+
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+
+    stock4 = False
+    if stock4:
+        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 3] / ARMA.mom_data.iloc[:-12, 3].shift(10)).dropna()
+
+        ARMA.ACF_and_PACF_test(test_time_series)
+
+        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
+        ARMA.evaluate_ARIMA(test_time_series, lag_list)
+
+        time_series = ARMA.mom_data.iloc[:-12, 3]
+        full_time_series = ARMA.mom_data.iloc[:, 3]
+
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
