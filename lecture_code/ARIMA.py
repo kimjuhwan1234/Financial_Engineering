@@ -21,7 +21,7 @@ class ARIMA:
         past_months = self.data.iloc[:-1, :]
         past_months.index = present_months.index
         self.mom_data = (present_months - past_months) / past_months
-
+        self.mom_data = self.mom_data.astype(float)
         self.model = []
 
     def plot_time_series(self, data: pd.DataFrame, seasonality: int):
@@ -210,10 +210,10 @@ class ARIMA:
         print(table_2_5.to_string())
 
     def plot_forecasting(self, time_series, lag, start_date, predict_date):
-        model = sm.tsa.statespace.SARIMAX(endog=time_series, seasonal_order=lag, trend='n').fit()
+        model = sm.tsa.statespace.SARIMAX(endog=time_series, order=lag, trend='n').fit()
 
-        forecasts_m1 = model.forecast(steps=1)
-
+        forecasts_m1 = model.forecast(steps=12)
+        forecasts_m1.index = pd.date_range(start=time_series.index[-1] + pd.DateOffset(days=1), periods=12, freq='MS')
         # Figure for M1
         fig, ax1 = plt.subplots(figsize=(10, 6))
         fitted = time_series[(time_series.index < predict_date) * (time_series.index >= start_date)]
@@ -285,7 +285,7 @@ class ARIMA:
                 model_1 = sm.tsa.statespace.SARIMAX(endog=x_train, order=lag, trend='n').fit()
 
             if not log:
-                model_1 = sm.tsa.statespace.SARIMAX(endog=x_train, seasonal_order=lag, trend='n').fit()
+                model_1 = sm.tsa.statespace.SARIMAX(endog=x_train, order=lag, trend='n').fit()
 
             # one-step-ahead forecasts
             forecast_1 = model_1.forecast(steps=1)
@@ -293,8 +293,8 @@ class ARIMA:
             # true one-step-ahead value
             y = time_series[crt_time]
             ground_truth.append(y)
-            f1.append(forecast_1[0])
-            f1_error.append(y - forecast_1[0])
+            f1.append(forecast_1.iloc[0])
+            f1_error.append(y - forecast_1.iloc[0])
 
         plt.figure(figsize=(12, 4))
         plt.plot(ground_truth, label='ground truth', color='k', linestyle='--')
@@ -320,7 +320,8 @@ class ARIMA:
 
     def forecasting_ARMA_GARCH(self, period: range, firm_number: int, lag: tuple):
         time_series = self.mom_data.iloc[period, firm_number]
-        SARIMA_model = sm.tsa.statespace.SARIMAX(endog=time_series, seasonal_order=lag, trend='n').fit()
+
+        SARIMA_model = sm.tsa.statespace.SARIMAX(endog=time_series, order=lag, trend='n').fit()
         GARCH_model = arch.arch_model(SARIMA_model.resid, vol='GARCH', p=1, q=1).fit(disp='off', show_warning=False)
 
         forecasts_m1 = SARIMA_model.forecast(steps=1)
@@ -331,14 +332,18 @@ class ARIMA:
 
 if __name__ == "__main__":
     input_dir = "../lecture_data"
-    file = "dataset.csv"
-    df = pd.read_csv(os.path.join(input_dir, file))
-    benchmark = pd.concat([df['Date'], df['KOSPI'], df['KOR10Y']], axis=1)
-    df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
+    file2 = "dataset.csv"
+    df2 = pd.read_csv(os.path.join(input_dir, file2))
+    benchmark = pd.concat([df2['Date'], df2['KOSPI'], df2['KOR10Y']], axis=1)
+    df2.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
 
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.set_index('Date', inplace=True)
+    file = "dataset.xlsx"
+    df = pd.read_excel(os.path.join(input_dir, file))
+    df.drop(index=0, inplace=True)
+    df['Symbol'] = pd.to_datetime(df['Symbol'])
+    df.set_index('Symbol', inplace=True)
     df = df.iloc[:, :4]
+    df = df.astype(float)
 
     backtesting_chunk = True
     if backtesting_chunk:
@@ -355,27 +360,28 @@ if __name__ == "__main__":
 
     ARMA = ARIMA(df)
 
-    overall = False
+    overall = True
     if overall:
-        ARMA.plot_time_series(ARMA.data, 10)
-        ARMA.adf_test(ARMA.mom_data, 10)
-        ARMA.kpss_test(ARMA.mom_data, 10)
+        ARMA.plot_time_series(ARMA.data, 0)
+        # ARMA.adf_test(ARMA.mom_data, 0)
+        # ARMA.kpss_test(ARMA.mom_data, 0)
 
     stock1 = False
     if stock1:
-        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 0] / ARMA.mom_data.iloc[:-12, 0].shift(10)).dropna()
+        # test_time_series = np.log(ARMA.mom_data.iloc[:-12, 0] / ARMA.mom_data.iloc[:-12, 0].shift(10)).dropna()
+        test_time_series = ARMA.mom_data.iloc[:-12, 0]
 
         ARMA.ACF_and_PACF_test(test_time_series)
 
-        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
+        lag_list = [([1], 0, [4, 6, 13, 14]), (0, 0, [4, 6, 13, 14]), (1, 0, 0)]
         ARMA.evaluate_ARIMA(test_time_series, lag_list)
 
-        time_series = ARMA.mom_data.iloc[:-12, 0]
-        full_time_series = ARMA.mom_data.iloc[:, 0]
+        time_series = ARMA.data.iloc[:-12, 0]
+        full_time_series = ARMA.data.iloc[:, 0]
 
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+        ARMA.plot_forecasting(time_series, (0, 0, [4, 6, 13, 14]), '2000-01-31', '2019-12-30')
 
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+        ARMA.estimate_forecasting_error(False, full_time_series, (0, 0, [4, 6, 13, 14]), '2019-12-30')
 
     stock2 = False
     if stock2:
@@ -389,9 +395,9 @@ if __name__ == "__main__":
         time_series = ARMA.mom_data.iloc[:-12, 1]
         full_time_series = ARMA.mom_data.iloc[:, 1]
 
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
 
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')
 
     stock3 = False
     if stock3:
@@ -405,9 +411,9 @@ if __name__ == "__main__":
         time_series = ARMA.mom_data.iloc[:-12, 2]
         full_time_series = ARMA.mom_data.iloc[:, 2]
 
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
 
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')
 
     stock4 = False
     if stock4:
@@ -421,6 +427,6 @@ if __name__ == "__main__":
         time_series = ARMA.mom_data.iloc[:-12, 3]
         full_time_series = ARMA.mom_data.iloc[:, 3]
 
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '2011-01-01', '2019-12-01')
+        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
 
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-01')
+        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')

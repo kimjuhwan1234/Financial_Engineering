@@ -1,17 +1,22 @@
+import pandas as pd
+
 from ARIMA import *
 from Markowitz import *
 
 if True:
     input_dir = "../lecture_data"
-    file = "dataset.csv"
-    df = pd.read_csv(os.path.join(input_dir, file))
-    benchmark = pd.concat([df['Date'], df['KOSPI'], df['KOR10Y']], axis=1)
-    df.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
-    df['Date'] = pd.to_datetime(df['Date'])
-    df.set_index('Date', inplace=True)
+    file2 = "dataset.csv"
+    df2 = pd.read_csv(os.path.join(input_dir, file2))
+    benchmark = pd.concat([df2['Date'], df2['KOSPI'], df2['KOR10Y']], axis=1)
+    df2.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
+
+
+    file = "dataset.xlsx"
+    df = pd.read_excel(os.path.join(input_dir, file))
+    df.drop(index=0, inplace=True)
+    df['Symbol'] = pd.to_datetime(df['Symbol'])
+    df.set_index('Symbol', inplace=True)
     df = df.iloc[:, :4]
-    print(benchmark)
-    print(df)
 
     present_months = df.iloc[1:, :]
     past_months = df.iloc[:-1, :]
@@ -35,17 +40,17 @@ if True:
 
 if True:
     ARMA = ARIMA(df)
-    lst = [([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10), ([2], 0, [2], 10)]
+    lst = [([1], 0, [1]), ([1], 0, [1]), ([1], 0, [1]), ([1], 0, [1])]
 
-    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:120])
-    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:120])
+    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:len(df)])
+    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:len(df)])
 
     for j in range(4):
         for i in range(len(index_chunks) - 1):
             period = range(index_chunks[i][0], index_chunks[i][1])
             r, var = ARMA.forecasting_ARMA_GARCH(period, j, lst[j])
-            return_df.iloc[i, j] = r
-            var_df.iloc[i, j] = var
+            return_df.iloc[i, j] = float(r)
+            var_df.iloc[i, j] = float(var)
 
 portfolio = True
 if portfolio:
@@ -58,6 +63,7 @@ if portfolio:
     sol_df.iloc[:12, :] = optimal.sol
 
     for i in range(len(index_chunks) - 1):
+        print(i)
         optimal.guess_test_cov(i)
         optimal.guess_test_mean(i)
         optimal.optimalize_portfolio(optimal.cov, optimal.mean)

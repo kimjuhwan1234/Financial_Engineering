@@ -55,7 +55,7 @@ class Optimization:
     def calculate_return(self, sol_df: pd.DataFrame, Plot: bool):
         profit_df = self.mom_data * sol_df
         profit_df = profit_df + 1
-        profit_df = np.log(profit_df)
+        profit_df = np.log(profit_df.astype(float))
 
         profit_df['Sum'] = profit_df.sum(axis=1)
         profit = profit_df['Sum']

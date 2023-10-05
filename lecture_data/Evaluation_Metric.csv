@@ -1,11 +1,11 @@
 ,Evaluation Metric(log scale)
-Cumulative Return,14.370747788314329
-monthly return min,-1.1809994616155584
-monthly return max,0.8482986530872111
-annual return mean,3.2594968265728053
-annual return std,1.8442837815581687
-downside std,1.4838653620655076
-Maximum drawdown,-0.6930282212805157
-Sharpe ratio,1.7673510222049311
-Sortino ratio,2.1966257248809002
-Calmar ratio,1.8442837815581687
+Cumulative Return,3.0720624228352764
+monthly return min,-1.8581785074601471
+monthly return max,1.3032613132524071
+annual return mean,0.1575303035422866
+annual return std,1.051677732254225
+downside std,0.944975853358339
+Maximum drawdown,-0.9383210335971365
+Sharpe ratio,0.14978952079229377
+Sortino ratio,0.16670299350236456
+Calmar ratio,1.051677732254225
