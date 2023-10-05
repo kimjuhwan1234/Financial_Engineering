@@ -1,5 +1,3 @@
-import pandas as pd
-
 from ARIMA import *
 from Markowitz import *
 
