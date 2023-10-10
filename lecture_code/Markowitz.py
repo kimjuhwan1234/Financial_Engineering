@@ -52,22 +52,29 @@ class Optimization:
         sol = qp(Cov, q, G, h, A, b, options={'maxiters': 20})
         self.sol = list(sol['x'])
 
-    def calculate_return(self, sol_df: pd.DataFrame, Plot: bool):
+    def calculate_return(self, benchmark, sol_df: pd.DataFrame, Plot: bool):
         profit_df = self.mom_data * sol_df
         profit_df = profit_df + 1
         profit_df = np.log(profit_df.astype(float))
 
-        profit_df['Sum'] = profit_df.sum(axis=1)
+        benchmark = benchmark + 1
+        benchmark = np.log(benchmark.astype(float))
+
+        profit_df['benchmark']=benchmark
+
+
+        profit_df['Sum'] = profit_df.iloc[:,:-1].sum(axis=1)
         profit = profit_df['Sum']
         self.profit = pd.DataFrame(profit)
 
         if Plot:
-            result = profit.cumsum(axis=0)
+            result = profit_df.iloc[2:,-2:].cumsum(axis=0)
             plt.figure(figsize=(10, 6))
             plt.plot(result)
-            plt.title('return')
+            plt.title('RETURN')
             plt.xlabel('Date')
-            plt.ylabel('Value')
+            plt.ylabel('Cumulative Value')
             plt.xticks(rotation=45)
+            plt.legend(handles=handles)
             plt.tight_layout()
             plt.show()
