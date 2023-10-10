@@ -39,9 +39,8 @@ class Optimization:
         Mean = matrix(self.return_df.iloc[i, :])
         self.mean = Mean
 
-    def optimalize_portfolio(self, Cov, Mean):
-        n = 4
-        r_min = 0.035
+    def optimalize_portfolio(self, n, Cov, Mean):
+        r_min = 0.03
 
         G = matrix(np.concatenate((-np.transpose(Mean), -np.identity(n)), 0))
         h = matrix(np.concatenate((-np.ones((1, 1)) * r_min, np.zeros((n, 1))), 0))
@@ -49,32 +48,31 @@ class Optimization:
         A = matrix(1.0, (1, n))
         b = matrix(1.0)
         q = matrix(np.zeros((n, 1)))
-        sol = qp(Cov, q, G, h, A, b, options={'maxiters': 20})
+        sol = qp(Cov, q, G, h, A, b)
         self.sol = list(sol['x'])
 
-    def calculate_return(self, benchmark, sol_df: pd.DataFrame, Plot: bool):
+    def calculate_return(self, sol_df: pd.DataFrame, Plot: bool):
         profit_df = self.mom_data * sol_df
-        profit_df = profit_df + 1
+        profit_df = (profit_df + 1)
         profit_df = np.log(profit_df.astype(float))
 
-        benchmark = benchmark + 1
+        benchmark = (self.benchmark + 1)
         benchmark = np.log(benchmark.astype(float))
 
-        profit_df['benchmark']=benchmark
+        profit_df['benchmark'] = benchmark
 
-
-        profit_df['Sum'] = profit_df.iloc[:,:-1].sum(axis=1)
+        profit_df['Sum'] = profit_df.iloc[:, :-1].sum(axis=1)
         profit = profit_df['Sum']
         self.profit = pd.DataFrame(profit)
 
         if Plot:
-            result = profit_df.iloc[2:,-2:].cumsum(axis=0)
+            result = profit_df.iloc[2:, -2:].cumsum(axis=0)
             plt.figure(figsize=(10, 6))
             plt.plot(result)
             plt.title('RETURN')
             plt.xlabel('Date')
             plt.ylabel('Cumulative Value')
             plt.xticks(rotation=45)
-            plt.legend(handles=handles)
+            # plt.legend(handles=handles)
             plt.tight_layout()
             plt.show()

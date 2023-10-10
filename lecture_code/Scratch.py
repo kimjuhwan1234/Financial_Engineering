@@ -2,18 +2,14 @@ from ARIMA import *
 from Markowitz import *
 
 if True:
+    n = 20
     input_dir = "../lecture_data"
-    file2 = "dataset.csv"
-    df2 = pd.read_csv(os.path.join(input_dir, file2))
-    benchmark = pd.concat([df2['Date'], df2['KOSPI'], df2['KOR10Y']], axis=1)
-    df2.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
-
     file = "dataset.xlsx"
     df = pd.read_excel(os.path.join(input_dir, file))
     df.drop(index=0, inplace=True)
     df['Symbol'] = pd.to_datetime(df['Symbol'])
     df.set_index('Symbol', inplace=True)
-    df = df.iloc[:, :4]
+    df = df.iloc[:, :n]
 
     present_months = df.iloc[1:, :]
     past_months = df.iloc[:-1, :]
@@ -24,14 +20,14 @@ if True:
     print(mom_data)
 
     file = "Benchmark.csv"
-    df3 = pd.read_csv(os.path.join(input_dir, file))
-    df3=df3.sort_values(by='Date', ascending=True)
-    df3.set_index('Date', inplace=True)
+    benchmark = pd.read_csv(os.path.join(input_dir, file))
+    benchmark = benchmark.sort_values(by='Date', ascending=True)
+    benchmark.set_index('Date', inplace=True)
     date = mom_data.index
     date = date[1:]
-    df3.index = date
-    df3=df3 / df3.shift(1) - 1
-    df3=df3.dropna()
+    benchmark.index = date
+    benchmark = benchmark / benchmark.shift(1) - 1
+    benchmark = benchmark.dropna()
 
 if True:
     total_index_length = len(df)
@@ -47,12 +43,12 @@ if True:
 
 if True:
     ARMA = ARIMA(df)
-    lst = [([1], 0, [1]), ([1], 0, [1]), ([1], 0, [1]), ([1], 0, [1])]
+    lst = [([1], 0, [1]) for _ in range(n)]
 
-    var_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:len(df)])
-    return_df = pd.DataFrame(columns=df.columns[0:4], index=df.index[13:len(df)])
+    var_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[13:len(df)])
+    return_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[13:len(df)])
 
-    for j in range(4):
+    for j in range(n):
         for i in range(len(index_chunks) - 1):
             period = range(index_chunks[i][0], index_chunks[i][1])
             r, var = ARMA.forecasting_ARMA_GARCH(period, j, lst[j])
@@ -66,17 +62,17 @@ if portfolio:
 
     optimal.guess_initial_cov()
     optimal.guess_initial_mean()
-    optimal.optimalize_portfolio(optimal.cov, optimal.mean)
+    optimal.optimalize_portfolio(n, optimal.cov, optimal.mean)
     sol_df.iloc[:12, :] = optimal.sol
 
     for i in range(len(index_chunks) - 1):
         print(i)
         optimal.guess_test_cov(i)
         optimal.guess_test_mean(i)
-        optimal.optimalize_portfolio(optimal.cov, optimal.mean)
+        optimal.optimalize_portfolio(n, optimal.cov, optimal.mean)
         sol_df.iloc[i + 12, :] = optimal.sol
 
-    optimal.calculate_return(df3, sol_df, Plot=True)
+    optimal.calculate_return(sol_df, Plot=True)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit_df.csv'))
 
 portfolio_analysis = False
