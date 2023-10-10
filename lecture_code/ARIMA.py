@@ -332,11 +332,6 @@ class ARIMA:
 
 if __name__ == "__main__":
     input_dir = "../lecture_data"
-    file2 = "dataset.csv"
-    df2 = pd.read_csv(os.path.join(input_dir, file2))
-    benchmark = pd.concat([df2['Date'], df2['KOSPI'], df2['KOR10Y']], axis=1)
-    df2.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
-
     file = "dataset.xlsx"
     df = pd.read_excel(os.path.join(input_dir, file))
     df.drop(index=0, inplace=True)
@@ -363,8 +358,8 @@ if __name__ == "__main__":
     overall = True
     if overall:
         ARMA.plot_time_series(ARMA.data, 0)
-        # ARMA.adf_test(ARMA.mom_data, 0)
-        # ARMA.kpss_test(ARMA.mom_data, 0)
+        ARMA.adf_test(ARMA.mom_data, 0)
+        ARMA.kpss_test(ARMA.mom_data, 0)
 
     stock1 = False
     if stock1:
@@ -382,51 +377,3 @@ if __name__ == "__main__":
         ARMA.plot_forecasting(time_series, (0, 0, [4, 6, 13, 14]), '2000-01-31', '2019-12-30')
 
         ARMA.estimate_forecasting_error(False, full_time_series, (0, 0, [4, 6, 13, 14]), '2019-12-30')
-
-    stock2 = False
-    if stock2:
-        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 1] / ARMA.mom_data.iloc[:-12, 1].shift(10)).dropna()
-
-        ARMA.ACF_and_PACF_test(test_time_series)
-
-        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
-        ARMA.evaluate_ARIMA(test_time_series, lag_list)
-
-        time_series = ARMA.mom_data.iloc[:-12, 1]
-        full_time_series = ARMA.mom_data.iloc[:, 1]
-
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
-
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')
-
-    stock3 = False
-    if stock3:
-        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 2] / ARMA.mom_data.iloc[:-12, 2].shift(10)).dropna()
-
-        ARMA.ACF_and_PACF_test(test_time_series)
-
-        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
-        ARMA.evaluate_ARIMA(test_time_series, lag_list)
-
-        time_series = ARMA.mom_data.iloc[:-12, 2]
-        full_time_series = ARMA.mom_data.iloc[:, 2]
-
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
-
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')
-
-    stock4 = False
-    if stock4:
-        test_time_series = np.log(ARMA.mom_data.iloc[:-12, 3] / ARMA.mom_data.iloc[:-12, 3].shift(10)).dropna()
-
-        ARMA.ACF_and_PACF_test(test_time_series)
-
-        lag_list = [([2], 0, [2]), (0, 0, [2]), ([2], 0, 0)]
-        ARMA.evaluate_ARIMA(test_time_series, lag_list)
-
-        time_series = ARMA.mom_data.iloc[:-12, 3]
-        full_time_series = ARMA.mom_data.iloc[:, 3]
-
-        ARMA.plot_forecasting(time_series, ([2], 0, [2], 10), '1999-12-28', '2019-12-30')
-
-        ARMA.estimate_forecasting_error(False, full_time_series, ([2], 0, [2], 10), '2019-12-30')
