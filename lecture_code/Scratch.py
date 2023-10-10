@@ -10,7 +10,6 @@ if True:
     benchmark = pd.concat([df2['Date'], df2['KOSPI'], df2['KOR10Y']], axis=1)
     df2.drop(columns=['KOSPI', 'KOR10Y'], inplace=True)
 
-
     file = "dataset.xlsx"
     df = pd.read_excel(os.path.join(input_dir, file))
     df.drop(index=0, inplace=True)
@@ -25,6 +24,16 @@ if True:
     mom_data.index = present_months.index
     mom_data = pd.DataFrame(mom_data)
     print(mom_data)
+
+    file = "Benchmark.csv"
+    df3 = pd.read_csv(os.path.join(input_dir, file))
+    df3=df3.sort_values(by='Date', ascending=True)
+    df3.set_index('Date', inplace=True)
+    date = mom_data.index
+    date = date[1:]
+    df3.index = date
+    df3=df3 / df3.shift(1) - 1
+    df3=df3.dropna()
 
 if True:
     total_index_length = len(df)
@@ -69,10 +78,10 @@ if portfolio:
         optimal.optimalize_portfolio(optimal.cov, optimal.mean)
         sol_df.iloc[i + 12, :] = optimal.sol
 
-    optimal.calculate_return(sol_df, Plot=True)
+    optimal.calculate_return(df3, sol_df, Plot=True)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit_df.csv'))
 
-portfolio_analysis = True
+portfolio_analysis = False
 if portfolio_analysis:
     result = pd.DataFrame(
         index=['Cumulative Return', 'monthly return min', 'monthly return max', 'annual return mean',
