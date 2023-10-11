@@ -6,9 +6,8 @@ import matplotlib.pyplot as plt
 
 
 class Optimization:
-    def __init__(self, data: pd.DataFrame, mom_data: pd.DataFrame, benchmark: pd.DataFrame,
+    def __init__(self, mom_data: pd.DataFrame, benchmark: pd.DataFrame,
                  return_df: pd.DataFrame, var_df: pd.DataFrame, index_chunks: list):
-        self.data = data
         self.mom_data = mom_data
         self.benchmark = benchmark
         self.return_df = return_df.astype(float)
@@ -40,7 +39,7 @@ class Optimization:
         self.mean = Mean
 
     def optimalize_portfolio(self, n, Cov, Mean):
-        r_min = 0.03
+        r_min = 0.01
 
         G = matrix(np.concatenate((-np.transpose(Mean), -np.identity(n)), 0))
         h = matrix(np.concatenate((-np.ones((1, 1)) * r_min, np.zeros((n, 1))), 0))
@@ -73,6 +72,5 @@ class Optimization:
             plt.xlabel('Date')
             plt.ylabel('Cumulative Value')
             plt.xticks(rotation=45)
-            # plt.legend(handles=handles)
             plt.tight_layout()
             plt.show()

@@ -35,21 +35,27 @@ if True:
 
     for i in range(0, total_index_length):
         start_index = i
-        if (start_index + 12) >= total_index_length:
+        if (start_index + 120) >= total_index_length:
             break
-        index_chunks.append((start_index, start_index + 12))
+        index_chunks.append((start_index, start_index + 120))
 
     print(index_chunks)
+
+if True:
+    var_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[121:len(df)])
+    return_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[121:len(df)])
+    mom_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[121:len(df)])
+
+
 
 if True:
     ARMA = ARIMA(df)
     lst = [([1], 0, [1]) for _ in range(n)]
 
-    var_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[13:len(df)])
-    return_df = pd.DataFrame(columns=df.columns[0:n], index=df.index[13:len(df)])
-
     for j in range(n):
-        for i in range(len(index_chunks) - 1):
+        for i in range(len(index_chunks)):
+            if i==0:
+                continue
             period = range(index_chunks[i][0], index_chunks[i][1])
             r, var = ARMA.forecasting_ARMA_GARCH(period, j, lst[j])
             return_df.iloc[i, j] = float(r)
@@ -57,7 +63,7 @@ if True:
 
 portfolio = True
 if portfolio:
-    optimal = Optimization(df, mom_data, benchmark, return_df, var_df, index_chunks)
+    optimal = Optimization(mom_data, benchmark, return_df, var_df, index_chunks)
     sol_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
 
     optimal.guess_initial_cov()
