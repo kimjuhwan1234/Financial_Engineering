@@ -3,8 +3,8 @@ import arch
 import warnings
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 from statsmodels.tsa.stattools import kpss
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf
@@ -16,12 +16,7 @@ warnings.filterwarnings("ignore")
 class ARIMA:
     def __init__(self, data: pd.DataFrame):
         self.data = data
-
-        present_months = self.data.iloc[1:, :]
-        past_months = self.data.iloc[:-1, :]
-        past_months.index = present_months.index
-        self.mom_data = (present_months - past_months) / past_months
-        self.mom_data = self.mom_data.astype(float)
+        self.data = self.data.astype(float)
         self.model = []
 
     def plot_time_series(self, data: pd.DataFrame, seasonality: int):
@@ -318,8 +313,8 @@ class ARIMA:
         print(f"var of f1:{round(np.array(f1).var(), 4)}")
         print(f'mean squared prediction error of f1: {round((f1_error ** 2).mean(), 4)}')
 
-    def forecasting_ARMA_GARCH(self, period: range, firm_number: int, lag: tuple):
-        time_series = self.mom_data.iloc[period, firm_number]
+    def forecasting_ARMA_GARCH(self, firm_number: int, lag: tuple):
+        time_series = self.data.iloc[:, firm_number]
 
         SARIMA_model = sm.tsa.statespace.SARIMAX(endog=time_series, order=lag, trend='n').fit()
         GARCH_model = arch.arch_model(SARIMA_model.resid, vol='GARCH', p=1, q=1).fit(disp='off', show_warning=False)
@@ -337,8 +332,15 @@ if __name__ == "__main__":
     df.drop(index=0, inplace=True)
     df['Symbol'] = pd.to_datetime(df['Symbol'])
     df.set_index('Symbol', inplace=True)
-    df = df.iloc[:, :4]
+    df = df.iloc[:, 105:109]
     df = df.astype(float)
+
+    present_months = df.iloc[1:, :]
+    past_months = df.iloc[:-1, :]
+    past_months.index = present_months.index
+    mom_data = (present_months - past_months) / past_months
+    mom_data.index = present_months.index
+    mom_data = pd.DataFrame(mom_data)
 
     backtesting_chunk = True
     if backtesting_chunk:
@@ -353,18 +355,18 @@ if __name__ == "__main__":
 
         print(index_chunks)
 
-    ARMA = ARIMA(df)
+    ARMA = ARIMA(mom_data)
 
     overall = True
     if overall:
         ARMA.plot_time_series(ARMA.data, 0)
-        ARMA.adf_test(ARMA.mom_data, 0)
-        ARMA.kpss_test(ARMA.mom_data, 0)
+        ARMA.adf_test(ARMA.data, 0)
+        ARMA.kpss_test(ARMA.data, 0)
 
     stock1 = False
     if stock1:
         # test_time_series = np.log(ARMA.mom_data.iloc[:-12, 0] / ARMA.mom_data.iloc[:-12, 0].shift(10)).dropna()
-        test_time_series = ARMA.mom_data.iloc[:-12, 0]
+        test_time_series = ARMA.data
 
         ARMA.ACF_and_PACF_test(test_time_series)
 

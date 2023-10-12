@@ -15,27 +15,21 @@ class Optimization:
         self.index_chunks = index_chunks
         self.cov = []
         self.mean = []
-        self.ini_mean = []
         self.sol = []
         self.profit = []
 
-    def guess_initial_cov(self):
-        Cov = matrix(self.mom_data.iloc[:12, :].cov().values)
-        self.cov = Cov
-
-    def guess_initial_mean(self):
-        Mean = matrix(self.mom_data.iloc[:12, :].mean())
-        self.mean = Mean
-
     def guess_test_cov(self, i: int):
-        var = self.var_df.iloc[i, :]
+        var = self.var_df.iloc[i, :].dropna().astype(float)
         std = var.apply(np.sqrt)
-        Cov = np.outer(std, std) * self.mom_data.iloc[self.index_chunks[i][0]:self.index_chunks[i][1], :].corr()
+        indexes_with_values = self.var_df.columns[self.var_df.iloc[i].notna()]
+        Cov = np.outer(std, std) * self.mom_data.loc[self.mom_data.index[self.index_chunks[i][0]]:self.mom_data.index[
+            self.index_chunks[i][1]], indexes_with_values].corr()
         Cov = matrix(Cov.values)
         self.cov = Cov
 
     def guess_test_mean(self, i: int):
-        Mean = matrix(self.return_df.iloc[i, :])
+        indexes_with_values = self.return_df.columns[self.return_df.iloc[i].notna()]
+        Mean = matrix(self.return_df.loc[self.return_df.index[i], indexes_with_values])
         self.mean = Mean
 
     def optimalize_portfolio(self, n, Cov, Mean):
@@ -58,19 +52,31 @@ class Optimization:
         benchmark = (self.benchmark + 1)
         benchmark = np.log(benchmark.astype(float))
 
-        profit_df['benchmark'] = benchmark
+        profit_df['KOSPI'] = benchmark
 
-        profit_df['Sum'] = profit_df.iloc[:, :-1].sum(axis=1)
-        profit = profit_df['Sum']
+        profit_df['Fund-K'] = profit_df.iloc[:, :-1].sum(axis=1)
+        profit = profit_df
         self.profit = pd.DataFrame(profit)
 
         if Plot:
             result = profit_df.iloc[2:, -2:].cumsum(axis=0)
             plt.figure(figsize=(10, 6))
-            plt.plot(result)
+            color_dict = {'Fund-K': 'navy', 'KOSPI': 'gray'}
+            labels = []
+            handles = []
+
+            for key in color_dict:
+                if key in result.T.index:
+                    idx = result.T.index.get_loc(key)
+                    line, = plt.plot(result.index, result.T.iloc[idx].fillna(method='ffill'),
+                                     label=key, color=color_dict[key])
+                    handles.append(line)
+                    labels.append(key)
+
             plt.title('RETURN')
             plt.xlabel('Date')
             plt.ylabel('Cumulative Value')
             plt.xticks(rotation=45)
+            plt.legend(handles=handles, labels=labels)
             plt.tight_layout()
             plt.show()
