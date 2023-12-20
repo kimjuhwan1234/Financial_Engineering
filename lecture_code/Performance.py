@@ -62,10 +62,10 @@ if Security_Selection:
         top_20_df = sorted_df.iloc[:-1, :20]
 
         # First ten years is train set, so save historical cov, mean, and firm list.
-        if i == 0:
-            ini_Cov = matrix(top_20_df.cov().values)
-            ini_Mean = matrix(top_20_df.mean())
-            ini_columns = top_20_df.columns
+        # if i == 0:
+        #     ini_Cov = matrix(top_20_df.cov().values)
+        #     ini_Mean = matrix(top_20_df.mean())
+        #     ini_columns = top_20_df.columns
 
         # Save predicted figures in var_df and return_df.
         ARMA = ARIMA(top_20_df)
@@ -82,11 +82,12 @@ portfolio = True
 if portfolio:
     # I'll save Markowitz model solution(no short selling) in sol_df.
     optimal = Optimization(mom_data, benchmark, return_df, var_df, index_chunks)
-    sol_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
+    sol_df = pd.DataFrame(columns=mom_data.columns, index=mom_data.index[120:len(mom_data)])
+    # sol_df = pd.DataFrame(index=optimal.mom_data.index, columns=optimal.mom_data.columns, dtype=float)
 
     # First 10 years solution should be same because it's train set.
-    optimal.optimalize_portfolio(n, ini_Cov, ini_Mean)
-    sol_df.loc[:sol_df.index[119], ini_columns] = optimal.sol
+    # optimal.optimalize_portfolio(n, ini_Cov, ini_Mean)
+    # sol_df.loc[:sol_df.index[119], ini_columns] = optimal.sol
 
     # generating and save test set solution.
     for i in range(len(index_chunks)):
