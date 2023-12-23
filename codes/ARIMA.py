@@ -368,7 +368,7 @@ if __name__ == "__main__":
         # test_time_series = np.log(ARMA.mom_data.iloc[:-12, 0] / ARMA.mom_data.iloc[:-12, 0].shift(10)).dropna()
         test_time_series = ARMA.data
 
-        ARMA.ACF_and_PACF_test(test_time_series.iloc[:,0])
+        ARMA.ACF_and_PACF_test(test_time_series.iloc[:,0], 'stock1')
 
         lag_list = [([1], 0, [4, 6, 13, 14]), (0, 0, [4, 6, 13, 14]), (1, 0, 0)]
         ARMA.evaluate_ARIMA(test_time_series, lag_list)
