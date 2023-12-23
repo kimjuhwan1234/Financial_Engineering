@@ -145,7 +145,7 @@ class ARIMA:
                 print(f'Critical values: {result[3]}')
                 print('---' * 40)
 
-    def ACF_and_PACF_test(self, time_series):
+    def ACF_and_PACF_test(self, time_series, name):
         '''PACF의 첫째는 무시.
         ACF가 기하급수적으로 감소하지 않고 선형이면 MA doesn't exist.
         Negative value of ACF is not important.'''
@@ -157,7 +157,7 @@ class ARIMA:
         plot_pacf(time_series, lags=20, ax=axes[1], method='ols', title='PACF', color='gray',
                   vlines_kwargs={'colors': 'gray', 'linewidth': 5}, alpha=None)
 
-        axes[1].hlines(xmin=0, xmax=20, y=2 * np.sqrt(1 / len(time_series)), label=f'{time_series.name}',
+        axes[1].hlines(xmin=0, xmax=20, y=2 * np.sqrt(1 / len(time_series)), label=f'{name}',
                        color='black', linewidth=1)
         axes[1].hlines(xmin=0, xmax=20, y=-2 * np.sqrt(1 / len(time_series)), color='black', linewidth=1)
         axes[1].legend()
@@ -326,7 +326,7 @@ class ARIMA:
 
 
 if __name__ == "__main__":
-    input_dir = "../lecture_data"
+    input_dir = "../files"
     file = "dataset.xlsx"
     df = pd.read_excel(os.path.join(input_dir, file))
     df.drop(index=0, inplace=True)
@@ -363,12 +363,12 @@ if __name__ == "__main__":
         ARMA.adf_test(ARMA.data, 0)
         ARMA.kpss_test(ARMA.data, 0)
 
-    stock1 = False
+    stock1 = True
     if stock1:
         # test_time_series = np.log(ARMA.mom_data.iloc[:-12, 0] / ARMA.mom_data.iloc[:-12, 0].shift(10)).dropna()
         test_time_series = ARMA.data
 
-        ARMA.ACF_and_PACF_test(test_time_series)
+        ARMA.ACF_and_PACF_test(test_time_series.iloc[:,0])
 
         lag_list = [([1], 0, [4, 6, 13, 14]), (0, 0, [4, 6, 13, 14]), (1, 0, 0)]
         ARMA.evaluate_ARIMA(test_time_series, lag_list)

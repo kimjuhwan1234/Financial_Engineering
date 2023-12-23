@@ -4,7 +4,7 @@ from Markowitz import *
 if True:
     # Bring data & and I choose the number of firms to invest as twenty.
     n = 20
-    input_dir = "../lecture_data"
+    input_dir = "../files"
     file = "dataset.xlsx"
     df = pd.read_excel(os.path.join(input_dir, file))
     df.drop(index=0, inplace=True)
@@ -75,8 +75,8 @@ if Security_Selection:
             var_df.loc[var_df.index[i], top_20_df.columns[j]] = float(var)
 
     # I checked whether it goes successfully or not and no problem.
-    var_df.to_csv('../lecture_data/var_df.csv')
-    return_df.to_csv('../lecture_data/return_df.csv')
+    var_df.to_csv('../files/var_df.csv')
+    return_df.to_csv('../files/return_df.csv')
 
 portfolio = True
 if portfolio:
@@ -98,7 +98,7 @@ if portfolio:
         sol_df.loc[var_df.index[i], indexes_with_values] = optimal.sol
 
     # I checked whether it goes successfully or not and no problem.
-    sol_df.to_csv('../lecture_data/sol_df.csv')
+    sol_df.to_csv('../files/sol_df.csv')
     optimal.calculate_return(sol_df, Plot=True)
     optimal.profit.to_csv(os.path.join(input_dir, 'profit_df.csv'))
 
@@ -143,4 +143,4 @@ if portfolio_analysis:
     calmar_ratio.iloc[0, :] = calmar
     result = pd.concat([result, calmar_ratio], axis=0)
 
-    result.to_csv('../lecture_data/Evaluation_Metric.csv')
+    result.to_csv('../files/Evaluation_Metric.csv')
